@@ -1,0 +1,56 @@
+stages:
+
+  clean_data:
+    cmd: python -m src.step_1_data_cleaning.clean_data
+    deps:
+      - src/2_data_cleaning/clean_data.py
+      - data/raw/train.csv
+      - data/raw/features.csv
+      - data/raw/stores.csv
+    outs:
+      - data/cleaned/df_clean.csv
+
+  engineer_features:
+    cmd: python -m src.step_2_feature_engineering.engineer_features
+    deps:
+      - src/3_feature_engineering/engineer_features.py
+      - data/cleaned/df_clean.csv
+    outs:
+      - data/processed/df_features.csv
+
+  split_time_series:
+    cmd: python -m src.step_3_data_splitting.split_time_series
+    deps:
+      - src/4_data_splitting/split_time_series.py
+      - data/processed/df_features.csv
+      - params.yaml
+    outs:
+      - data/splits/X_train.csv
+      - data/splits/X_val.csv
+      - data/splits/X_test.csv
+      - data/splits/y_train.csv
+      - data/splits/y_val.csv
+      - data/splits/y_test.csv
+      - data/splits/feature_list.json
+
+  train_model:
+    cmd: python -m src.step_4_model_training.train_model
+    deps:
+      - src/5_model_training/train_model.py
+      - data/splits/X_train.csv
+      - data/splits/X_val.csv
+      - data/splits/y_train.csv
+      - data/splits/y_val.csv
+      - params.yaml
+    outs:
+      - models/xgboost_model.joblib
+
+  model_evaluation:
+    cmd: python -m src.step_5_model_evaluation.evaluate_regression
+    deps:
+      - src/6_model_evaluation/evaluate_regression.py
+      - models/xgboost_model.joblib
+      - data/splits/X_val.csv
+      - data/splits/y_val.csv
+    metrics:
+      - metrics/xgboost_validation_metrics.json

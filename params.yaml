@@ -1,0 +1,17 @@
+train:
+  model: XGBRegressor
+  parameters:
+    objective: reg:squarederror
+    colsample_bytree: 0.8
+    enable_categorical: false
+    learning_rate: 0.05
+    max_depth: 6
+    n_estimators: 300
+    random_state: 42
+    subsample: 0.8
+data_split:
+  strategy: time_series
+  train_ratio: 0.7
+  val_ratio: 0.15
+  test_ratio: 0.15
+  test_cutoff_date: '2012-07-27'
