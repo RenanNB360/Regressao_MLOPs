@@ -153,3 +153,8 @@ stages:
       hash: md5
       md5: a6ffd2fede7cfb8a6d77cccb588e5ec2
       size: 1715
+    outs:
+    - path: metrics/xgboost_validation_metrics.json
+      hash: md5
+      md5: 5d215a26721c16a4398ebaf8dab08725
+      size: 91

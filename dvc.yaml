@@ -60,8 +60,6 @@ stages:
       - train.parameters.subsample
     outs:
       - models/xgboost_model.joblib
-    metrics:
-      - metrics/xgboost_validation_metrics.json
 
   model_evaluation:
     cmd: python -m src.step_5_model_evaluation.evaluate_regression
