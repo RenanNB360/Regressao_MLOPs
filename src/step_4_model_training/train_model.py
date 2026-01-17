@@ -3,6 +3,7 @@ from pathlib import Path
 
 import joblib
 import pandas as pd
+import mlflow
 from xgboost import XGBRegressor
 
 logger = logging.getLogger("src.model_training.train_xgboost")
@@ -46,10 +47,15 @@ def load_params():
 def train_model(X_train, y_train, X_val, y_val, params):
     logger.info("Training XGBoost model")
 
-    model = XGBRegressor(**params)
-    model.fit(X_train, y_train, eval_set=[(X_val, y_val)], verbose=False)
+    mlflow.set_experiment('ml_regression')
+    mlflow.xgboost.autolog()
 
-    return model
+    with mlflow.start_run():
+        mlflow.log_params(params=params)
+        model = XGBRegressor(**params)
+        model.fit(X_train, y_train, eval_set=[(X_val, y_val)], verbose=False)
+
+        return model
 
 
 def save_model(model: XGBRegressor) -> None:
