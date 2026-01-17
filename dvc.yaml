@@ -3,7 +3,7 @@ stages:
   clean_data:
     cmd: python -m src.step_1_data_cleaning.clean_data
     deps:
-      - src/2_data_cleaning/clean_data.py
+      - src/step_1_data_cleaning/clean_data.py
       - data/raw/train.csv
       - data/raw/features.csv
       - data/raw/stores.csv
@@ -13,7 +13,7 @@ stages:
   engineer_features:
     cmd: python -m src.step_2_feature_engineering.engineer_features
     deps:
-      - src/3_feature_engineering/engineer_features.py
+      - src/step_2_feature_engineering/engineer_features.py
       - data/cleaned/df_clean.csv
     outs:
       - data/processed/df_features.csv
@@ -21,9 +21,15 @@ stages:
   split_time_series:
     cmd: python -m src.step_3_data_splitting.split_time_series
     deps:
-      - src/4_data_splitting/split_time_series.py
+      - src/step_3_data_splitting/split_time_series.py
       - data/processed/df_features.csv
       - params.yaml
+    params:
+      - data_split.strategy
+      - data_split.train_ratio
+      - data_split.val_ratio
+      - data_split.test_ratio
+      - data_split.test_cutoff_date
     outs:
       - data/splits/X_train.csv
       - data/splits/X_val.csv
@@ -36,19 +42,31 @@ stages:
   train_model:
     cmd: python -m src.step_4_model_training.train_model
     deps:
-      - src/5_model_training/train_model.py
+      - src/step_4_model_training/train_model.py
       - data/splits/X_train.csv
       - data/splits/X_val.csv
       - data/splits/y_train.csv
       - data/splits/y_val.csv
       - params.yaml
+    params:
+      - train.model
+      - train.parameters.objective
+      - train.parameters.colsample_bytree
+      - train.parameters.enable_categorical
+      - train.parameters.learning_rate
+      - train.parameters.max_depth
+      - train.parameters.n_estimators
+      - train.parameters.random_state
+      - train.parameters.subsample
     outs:
       - models/xgboost_model.joblib
+    metrics:
+      - metrics/xgboost_validation_metrics.json
 
   model_evaluation:
     cmd: python -m src.step_5_model_evaluation.evaluate_regression
     deps:
-      - src/6_model_evaluation/evaluate_regression.py
+      - src/step_5_model_evaluation/evaluate_regression.py
       - models/xgboost_model.joblib
       - data/splits/X_val.csv
       - data/splits/y_val.csv

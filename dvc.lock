@@ -1,0 +1,155 @@
+schema: '2.0'
+stages:
+  clean_data:
+    cmd: python -m src.step_1_data_cleaning.clean_data
+    deps:
+    - path: data/raw/features.csv
+      hash: md5
+      md5: 26d777bfc9c5b86b35dbbbb2d1726748
+      size: 592289
+    - path: data/raw/stores.csv
+      hash: md5
+      md5: 7f9ba591e643062af41888db96c1e3b6
+      size: 532
+    - path: data/raw/train.csv
+      hash: md5
+      md5: 9663f2973887c5fad0ad271fc64a5dbe
+      size: 12842546
+    - path: src/step_1_data_cleaning/clean_data.py
+      hash: md5
+      md5: 4d09e095602f883363cd27e45802d88c
+      size: 3008
+    outs:
+    - path: data/cleaned/df_clean.csv
+      hash: md5
+      md5: 5ad3cdd4526d12737c0f41ee89db9611
+      size: 49566244
+  engineer_features:
+    cmd: python -m src.step_2_feature_engineering.engineer_features
+    deps:
+    - path: data/cleaned/df_clean.csv
+      hash: md5
+      md5: 5ad3cdd4526d12737c0f41ee89db9611
+      size: 49566244
+    - path: src/step_2_feature_engineering/engineer_features.py
+      hash: md5
+      md5: dc0ee17efc7c3b36bbd0c381b325434b
+      size: 3031
+    outs:
+    - path: data/processed/df_features.csv
+      hash: md5
+      md5: 71551a7ee4c6f3562f2f0f36d7b6c416
+      size: 54971176
+  split_time_series:
+    cmd: python -m src.step_3_data_splitting.split_time_series
+    deps:
+    - path: data/processed/df_features.csv
+      hash: md5
+      md5: 71551a7ee4c6f3562f2f0f36d7b6c416
+      size: 54971176
+    - path: params.yaml
+      hash: md5
+      md5: e0d80c6291e11316a820563a27bb5059
+      size: 359
+    - path: src/step_3_data_splitting/split_time_series.py
+      hash: md5
+      md5: f989e43c6dcb493df1f6d707a4759529
+      size: 3017
+    params:
+      params.yaml:
+        data_split.strategy: time_series
+        data_split.test_cutoff_date: '2012-07-27'
+        data_split.test_ratio: 0.15
+        data_split.train_ratio: 0.7
+        data_split.val_ratio: 0.15
+    outs:
+    - path: data/splits/X_test.csv
+      hash: md5
+      md5: e0e83ab030bbac83fd6fb5ee23c05872
+      size: 6748660
+    - path: data/splits/X_train.csv
+      hash: md5
+      md5: 78443a858a07e5dd259b72ba918751ec
+      size: 32438289
+    - path: data/splits/X_val.csv
+      hash: md5
+      md5: c44bb567bff1a49063bae94514b90dfc
+      size: 5657258
+    - path: data/splits/feature_list.json
+      hash: md5
+      md5: c8d4cd7ec99e01d17a9730816a66d4b4
+      size: 362
+    - path: data/splits/y_test.csv
+      hash: md5
+      md5: f1a99590e5a92e59dd152a678db67cd2
+      size: 682266
+    - path: data/splits/y_train.csv
+      hash: md5
+      md5: 104b5143d5ba05ff4ee6d83d5b5a4c8a
+      size: 3443237
+    - path: data/splits/y_val.csv
+      hash: md5
+      md5: 01789a2abc173a4a3f6904972aa0ba60
+      size: 574264
+  train_model:
+    cmd: python -m src.step_4_model_training.train_model
+    deps:
+    - path: data/splits/X_train.csv
+      hash: md5
+      md5: 78443a858a07e5dd259b72ba918751ec
+      size: 32438289
+    - path: data/splits/X_val.csv
+      hash: md5
+      md5: c44bb567bff1a49063bae94514b90dfc
+      size: 5657258
+    - path: data/splits/y_train.csv
+      hash: md5
+      md5: 104b5143d5ba05ff4ee6d83d5b5a4c8a
+      size: 3443237
+    - path: data/splits/y_val.csv
+      hash: md5
+      md5: 01789a2abc173a4a3f6904972aa0ba60
+      size: 574264
+    - path: params.yaml
+      hash: md5
+      md5: e0d80c6291e11316a820563a27bb5059
+      size: 359
+    - path: src/step_4_model_training/train_model.py
+      hash: md5
+      md5: 6e4f7493ab54da51124e9cc4471a23c4
+      size: 1751
+    params:
+      params.yaml:
+        train.model: XGBRegressor
+        train.parameters.colsample_bytree: 0.8
+        train.parameters.enable_categorical: false
+        train.parameters.learning_rate: 0.05
+        train.parameters.max_depth: 6
+        train.parameters.n_estimators: 300
+        train.parameters.objective: reg:squarederror
+        train.parameters.random_state: 42
+        train.parameters.subsample: 0.8
+    outs:
+    - path: models/xgboost_model.joblib
+      hash: md5
+      md5: f96e35186e62315ad8f9fc8e92ff70f4
+      size: 1402948
+  model_evaluation:
+    cmd: python -m src.step_5_model_evaluation.evaluate_regression
+    deps:
+    - path: data/splits/X_val.csv
+      hash: md5
+      md5: c44bb567bff1a49063bae94514b90dfc
+      size: 5657258
+    - path: data/splits/y_val.csv
+      hash: md5
+      md5: 01789a2abc173a4a3f6904972aa0ba60
+      size: 574264
+    - path: models/xgboost_model.joblib
+      hash: md5
+      md5: f96e35186e62315ad8f9fc8e92ff70f4
+      size: 1402948
+    - path: src/step_5_model_evaluation/evaluate_regression.py
+      hash: md5
+      md5: a6ffd2fede7cfb8a6d77cccb588e5ec2
+      size: 1715
