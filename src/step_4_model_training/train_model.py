@@ -48,40 +48,53 @@ def load_params():
 def train_model(X_train, y_train, X_val, y_val, params):
     logger.info("Training XGBoost model")
 
-    mlflow.set_experiment('ml_regression')
+    mlflow.set_experiment("ml_regression")
+    client = mlflow.tracking.MlflowClient()
 
-    is_experiment = os.getenv('DVC_EXP_NAME') is not None
+    is_dvc_exp = os.getenv("DVC_EXP_NAME") is not None
     extra_args = {}
-    if is_experiment:
-        runs = mlflow.search_runs(
-            experiment_ids=[os.getenv('MLFLOW_EXPERIMENT_ID')],
-            filter_string='tags.dvc_exp = "True"',
-            order_by=['start_time DESC'],
+
+    if is_dvc_exp:
+        experiment = client.get_experiment_by_name("ml_regression")
+
+        runs = client.search_runs(
+            experiment_ids=[experiment.experiment_id],
+            filter_string='tags.dvc_exp = "true"',
+            order_by=["start_time DESC"],
+            max_results=1,
         )
-        if runs.empty:
-            with mlflow.start_run() as parent_run:
-                mlflow.set_tag('dvc_exp', True)
-                parent_run_id = parent_run.info.run_id
+
+        if runs:
+            parent_run_id = runs[0].info.run_id
         else:
-            parent_run_id.runs.iloc[0].run_id
-        run_name = os.getenv('DVC_EXP_NAME')
+            with mlflow.start_run(run_name="dvc_parent") as parent:
+                mlflow.set_tag("dvc_exp", "true")
+                parent_run_id = parent.info.run_id
+
         extra_args = {
-            'parent_run_id': parent_run_id,
-            'run_name': run_name,
-            'nested': True,
+            "parent_run_id": parent_run_id,
+            "run_name": os.getenv("DVC_EXP_NAME"),
+            "nested": True,
         }
 
     with mlflow.start_run(**extra_args):
-        mlflow.log_params(params=params)
+        mlflow.log_params(params)
+
         model = XGBRegressor(**params)
-        model.fit(X_train, y_train, eval_set=[(X_val, y_val)], verbose=False)
+        model.fit(
+            X_train,
+            y_train,
+            eval_set=[(X_val, y_val)],
+            verbose=False,
+        )
 
         mlflow.sklearn.log_model(
             sk_model=model,
-            artifact_path="model"
+            artifact_path="model",
         )
 
         return model
+
 
 
 def save_model(model: XGBRegressor) -> None:
