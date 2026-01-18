@@ -4,6 +4,7 @@ from pathlib import Path
 import joblib
 import pandas as pd
 import mlflow
+import os
 from xgboost import XGBRegressor
 
 logger = logging.getLogger("src.model_training.train_xgboost")
@@ -48,12 +49,37 @@ def train_model(X_train, y_train, X_val, y_val, params):
     logger.info("Training XGBoost model")
 
     mlflow.set_experiment('ml_regression')
-    mlflow.xgboost.autolog()
 
-    with mlflow.start_run():
+    is_experiment = os.getenv('DVC_EXP_NAME') is not None
+    extra_args = {}
+    if is_experiment:
+        runs = mlflow.search_runs(
+            experiment_ids=[os.getenv('MLFLOW_EXPERIMENT_ID')],
+            filter_string='tags.dvc_exp = "True"',
+            order_by=['start_time DESC'],
+        )
+        if runs.empty:
+            with mlflow.start_run() as parent_run:
+                mlflow.set_tag('dvc_exp', True)
+                parent_run_id = parent_run.info.run_id
+        else:
+            parent_run_id.runs.iloc[0].run_id
+        run_name = os.getenv('DVC_EXP_NAME')
+        extra_args = {
+            'parent_run_id': parent_run_id,
+            'run_name': run_name,
+            'nested': True,
+        }
+
+    with mlflow.start_run(**extra_args):
         mlflow.log_params(params=params)
         model = XGBRegressor(**params)
         model.fit(X_train, y_train, eval_set=[(X_val, y_val)], verbose=False)
+
+        mlflow.sklearn.log_model(
+            sk_model=model,
+            artifact_path="model"
+        )
 
         return model
 

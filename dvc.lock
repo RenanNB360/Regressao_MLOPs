@@ -116,8 +116,8 @@ stages:
       size: 359
     - path: src/step_4_model_training/train_model.py
       hash: md5
-      md5: 11ff05abd12f74e9843e3c6f258573dd
-      size: 1920
+      md5: 58ced4790c3103af17e4e3599d0d5942
+      size: 1998
     params:
       params.yaml:
         train.model: XGBRegressor
