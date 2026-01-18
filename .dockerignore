@@ -1,0 +1,22 @@
+# Python
+.git
+.conda
+ml_classifier.egg-info
+__pycache__
+
+# Data
+data/**/*.csv
+
+# Metrics
+metrics/*.json
+
+
+# DVC
+.dvc
+
+# MLFLOW
+mlruns
+
+# PROJECT
+artifacts
+models

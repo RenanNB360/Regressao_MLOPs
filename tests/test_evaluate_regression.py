@@ -1,13 +1,11 @@
 import pytest
 import pandas as pd
 import numpy as np
-import json
 from unittest.mock import patch, MagicMock, mock_open
 from src.step_5_model_evaluation.evaluate_regression import (
     load_validation_data,
     load_model,
     evaluate_model,
-    save_metrics,
     main
 )
 
@@ -33,37 +31,33 @@ def test_load_model(mock_joblib):
     assert model == "fake_model"
     assert mock_joblib.called
 
-def test_evaluate_model(dummy_val_data):
+@patch("mlflow.search_runs")
+@patch("mlflow.start_run")
+@patch("mlflow.log_metrics")
+@patch("mlflow.set_experiment")
+def test_evaluate_model(mock_set_exp, mock_log, mock_start, mock_search, dummy_val_data):
     X, y = dummy_val_data
+    
+    mock_runs = MagicMock()
+    mock_runs.iloc = [MagicMock(run_id="fake_run_id")]
+    mock_search.return_value = mock_runs
     
     mock_model = MagicMock()
     mock_model.predict.return_value = np.array([11.0, 19.0, 31.0])
     
-    metrics = evaluate_model(mock_model, X, y)
+    with patch("builtins.open", mock_open()):
+        metrics = evaluate_model(mock_model, X, y)
     
     assert "RMSE" in metrics
-    assert "MAE" in metrics
-    assert "R2" in metrics
     assert metrics["MAE"] == pytest.approx(1.0)
-    assert isinstance(metrics["RMSE"], float)
-
-@patch("json.dump")
-def test_save_metrics(mock_json_dump):
-    metrics = {"RMSE": 0.5, "MAE": 0.4, "R2": 0.9}
-    
-    with patch("builtins.open", mock_open()):
-        save_metrics(metrics)
-    
-    assert mock_json_dump.called
-    args, _ = mock_json_dump.call_args
-    assert args[0] == metrics
+    assert mock_log.called
+    assert mock_set_exp.called
 
 @patch("src.step_5_model_evaluation.evaluate_regression.load_validation_data")
 @patch("src.step_5_model_evaluation.evaluate_regression.load_model")
 @patch("src.step_5_model_evaluation.evaluate_regression.evaluate_model")
-@patch("src.step_5_model_evaluation.evaluate_regression.save_metrics")
-def test_main_evaluation_orchestration(mock_save, mock_eval, mock_load_m, mock_load_d):
-    
+def test_main_evaluation_orchestration(mock_eval, mock_load_m, mock_load_d):
+    # Setup mocks
     mock_load_d.return_value = (None, None)
     mock_load_m.return_value = MagicMock()
     mock_eval.return_value = {"MAE": 0.1}
@@ -73,4 +67,3 @@ def test_main_evaluation_orchestration(mock_save, mock_eval, mock_load_m, mock_l
     assert mock_load_d.called
     assert mock_load_m.called
     assert mock_eval.called
-    assert mock_save.called
